@@ -40,7 +40,7 @@ magic_trace_llvm_symbolize_address(llvm::symbolize::LLVMSymbolizer *symbolizer,
                                    caml_string_length(v_executable_file)};
   llvm::object::SectionedAddress sectioned_address{
       address, llvm::object::SectionedAddress::UndefSection};
-  auto result = symbolizer->symbolizeInlinedCode(executable_file, sectioned_address);
+  auto result = symbolizer->symbolizeInlinedCode(std::string(executable_file), sectioned_address);
   if (auto _ = result.takeError()) {
     CAMLreturn((value)NULL);
   }
@@ -63,7 +63,7 @@ magic_trace_llvm_symbolize_address(llvm::symbolize::LLVMSymbolizer *symbolizer,
     }
   }
   if (needs_short_names) {
-    if (auto module = symbolizer->getOrCreateModuleInfo(executable_file)) {
+    if (auto module = symbolizer->getOrCreateModuleInfo(std::string(executable_file))) {
       if (llvm::symbolize::SymbolizableModule *info = *module) {
         short_result = info->symbolizeInlinedCode(
             sectioned_address,

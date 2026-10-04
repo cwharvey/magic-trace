@@ -9,6 +9,7 @@ let snapshot_on_exit = bit 3
 let last_branch_record = bit 4
 let dlfilter = bit 5
 let ctlfd = bit 6
+let ptwrite = bit 7
 
 include Flags.Make (struct
     let allow_intersecting = false
@@ -22,6 +23,7 @@ include Flags.Make (struct
       ; last_branch_record, "last_branch_record"
       ; dlfilter, "dlfilter"
       ; ctlfd, "ctlfd"
+      ; ptwrite, "ptwrite"
       ]
     ;;
   end)
@@ -55,6 +57,16 @@ let supports_configurable_psb_period () =
   with
   (* Even if this file is not present (i.e. when Intel PT isn't present), we
      don't want capability checking to fail. *)
+  | Sys_error _ -> false
+;;
+
+let supports_ptwrite () =
+  try
+    let ptw_cap =
+      In_channel.read_all "/sys/bus/event_source/devices/intel_pt/caps/ptwrite"
+    in
+    String.( = ) ptw_cap "1\n"
+  with
   | Sys_error _ -> false
 ;;
 
@@ -119,4 +131,5 @@ let detect_exn () =
   |> set_if (supports_last_branch_record ()) last_branch_record
   |> set_if (supports_dlfilter version) dlfilter
   |> set_if (supports_ctlfd version) ctlfd
+  |> set_if (supports_ptwrite ()) ptwrite
 ;;

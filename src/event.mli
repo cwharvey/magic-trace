@@ -56,6 +56,7 @@ module Ok : sig
           ; count : int
           ; name : Collection_mode.Event.Name.t
           } (** Represents counter based events collected through sampling. *)
+      | Ptwrite of { payload : int64 }
     [@@deriving sexp]
   end
 

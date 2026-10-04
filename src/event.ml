@@ -88,6 +88,7 @@ module Ok = struct
           ; count : int
           ; name : Collection_mode.Event.Name.t
           }
+      | Ptwrite of { payload : Int64.Hex.t }
     [@@deriving sexp, bin_io]
   end
 

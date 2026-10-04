@@ -3,7 +3,7 @@
  (public_names magic-trace)
  (libraries core magic_trace_lib core_unix.command_unix)
  (link_flags
-  (:standard -cclib -lstdc++))
+  (:standard -cclib -lstdc++ -cclib -ltinfo -cclib -lzstd))
  (foreign_stubs
   (language c)
   (names version_stubs))

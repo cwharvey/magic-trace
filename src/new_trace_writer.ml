@@ -544,6 +544,13 @@ and write_event' (T t) ?events_writer event =
          ~name:track_name
          ~time
          ~time_end:time
+     | { Event.Ok.thread = _
+       ; time = _
+       ; data = Ptwrite { payload }
+       ; in_transaction = _
+       } ->
+       let name = sprintf "ptwrite: 0x%Lx" payload in
+       write_duration_instant t ~thread ~name ~time ~args:[ "payload", Tracing.Trace.Arg.Pointer payload ]
      | { Event.Ok.thread = _ (* Already used this to look up thread info. *)
        ; time = _ (* Already in scope. Also, this time hasn't been [map_time]'d. *)
        ; data = Power { freq }

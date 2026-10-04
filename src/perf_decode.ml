@@ -29,6 +29,10 @@ let perf_cbr_event_re =
   Re.Perl.re {|^ *([a-z )(]*)? +cbr: +([0-9]+ +freq: +([0-9]+) MHz)?(.*)$|} |> Re.compile
 ;;
 
+let perf_ptwrite_event_re =
+  Re.Perl.re {|^ *([a-z )(]*)? +IP: +([0-9]+) +payload: +(0x[0-9a-fA-F]+)(.*)$|} |> Re.compile
+;;
+
 let trace_error_re =
   Re.Posix.re
     {|^ instruction trace error type [0-9]+ (time ([0-9]+)\.([0-9]+) )?cpu [\-0-9]+ pid ([\-0-9]+) tid ([\-0-9]+) ip (0x[0-9a-fA-F]+|0) code [0-9]+: (.*)$|}
@@ -47,7 +51,7 @@ type header =
       { thread : Event.Thread.t
       ; time : Time_ns.Span.t
       ; period : int
-      ; event : [ `Branches | `Cbr | `Psb | `Cycles | `Branch_misses | `Cache_misses ]
+      ; event : [ `Branches | `Cbr | `Psb | `Cycles | `Branch_misses | `Cache_misses | `Ptwrite ]
       ; remaining_line : string
       }
 
@@ -99,6 +103,7 @@ let parse_event_header line =
         | "cycles" -> `Cycles
         | "branch-misses" -> `Branch_misses
         | "cache-misses" -> `Cache_misses
+        | "ptwrite" -> `Ptwrite
         | _ ->
           raise_s
             [%message
@@ -185,6 +190,18 @@ let parse_perf_cbr_event thread time line : Event.t =
     raise_s
       [%message
         "Regex of perf cbr event did not match expected fields" (results : string array)]
+;;
+
+let parse_perf_ptwrite_event thread time line : Event.t =
+  match Re.Group.all (Re.exec perf_ptwrite_event_re line) with
+  | [| _; _; _; payload; _ |] ->
+    let payload = Util.int64_of_hex_string ~remove_hex_prefix:true payload in
+    Ok
+      { thread; time; data = Ptwrite { payload }; in_transaction = false }
+  | results ->
+    raise_s
+      [%message
+        "Regex of perf ptwrite event did not match expected fields" (results : string array)]
 ;;
 
 let parse_location ?perf_maps ~pid instruction_pointer symbol_and_offset
@@ -364,6 +381,8 @@ let to_event ?perf_maps lines : Event.t option =
           | `Cbr ->
             (* cbr (core-to-bus ratio) are events which show frequency changes. *)
             Some (parse_perf_cbr_event thread time remaining_line)
+          | `Ptwrite ->
+            Some (parse_perf_ptwrite_event thread time remaining_line)
           | `Psb -> (* Ignore psb (packet stream boundary) packets *) None
           | `Cycles -> Some (parse_perf_cycles_event ?perf_maps thread time lines)
           | `Branch_misses ->
@@ -656,6 +675,18 @@ module%test _ = struct
        7f068fbfd330 mmap64+0x50 (/usr/lib64/ld-2.28.so)";
     [%expect {|
         () |}]
+  ;;
+
+  let%expect_test "ptwrite event" =
+    check
+      " 2937048/2937048 448556.689322817:                                   1    \
+       ptwrite:                        IP: 0 payload: 0x12345678                   \
+       0                0 [unknown] ([unknown])";
+    [%expect
+      {|
+        ((Ok
+          ((thread ((pid (2937048)) (tid (2937048)))) (time 5d4h35m56.689322817s)
+           (data (Ptwrite (payload 0x12345678)))))) |}]
   ;;
 
   let%expect_test "sampled callstack" =
