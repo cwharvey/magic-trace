@@ -1,0 +1,20 @@
+* print perf command
+
+it is a hidden developer flag. To use it, you must:
+
+  1. Set the environment variable MAGIC_TRACE_DEBUG=1
+  2. Pass the hidden flag -z-print-perf-commands to your magic-trace command.
+
+  For example:
+
+    MAGIC_TRACE_DEBUG=1 magic-trace run -z-print-perf-commands -- ./demo/ptwrite_queue
+
+  When you run this, it will echo the exact perf record and perf script commands right to your terminal before executing them.
+
+* compile the demo
+
+gcc -O2 -mptwrite -pthread demo/ptwrite_queue.c -o demo/ptwrite_queue
+
+* new trace writer backend
+
+git show 52b9b4863ff06b4da0940ea62f80d6dd8ed3ab51
